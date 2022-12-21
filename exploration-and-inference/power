@@ -1,0 +1,44 @@
+# First, import libraries:
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+
+# Initialize variables:
+popSize = int(1e5) # Size of the population
+nnMax = 13000 # Maximal sample size to be considered
+nnMin = 4000 # Minimal sample size to be considered
+sampleSize = np.linspace(nnMin,nnMax,246) # array of each sample size
+effectSize = np.linspace(0,1.5,31) # From 0 to 1.5, in .05 increments
+# As std is one, effect_size will be in units of std
+pwr = np.empty([len(sampleSize),len(effectSize)]) # initialize power array
+pwr[:] = np.NaN # then conver to nan
+
+# Run calculations:
+for es in range(len(effectSize)): # loop through each effect size (31 total)
+    A = np.random.normal(0,1,[popSize,2]) # Get the population of random 
+    # numbers for each effect size - 2 columns, 1000 rows
+    A[:,1] = A[:,1] + effectSize[es] # Add effect size to 2nd one
+    for n in range(len(sampleSize)): # loop through each sample size
+        mm = int(2e1) # Number of repeats
+        significances = np.empty([mm,1]) # preallocate
+        significances[:] = np.NaN
+        for ii in range(mm): # Do this mm times for each one
+            sampInd = np.random.randint(0,popSize,[n+5,2]) # subsample
+            # we add 5 to n because n is indexed at 0 but our min n is 5
+            drawnSample = np.empty([n+5,2]) # initialize empty
+            # drawn_sample starts as 5x2 and with each iteration adds one row
+            drawnSample[:] = np.NaN # convert to NaN
+            drawnSample[:,0] = A[sampInd[:,0],0] 
+            drawnSample[:,1] = A[sampInd[:,0],1]
+            t,p = stats.kstest(drawnSample[:,0],drawnSample[:,1])
+            if p < .05: # assuming our alpha is 0.05
+                significances[ii,0] = 1 # if significant, assign 1
+            else:
+                significances[ii,0] = 0 # if ~significant, assign 0
+        pwr[n,es] = sum(significances)/mm*100 # compute power
+        
+# Plot it:
+plt.pcolor(pwr) #create a pseudocolor plot with a non-regular rectangular grid
+plt.xlabel('real effect size (mean diff in SD')
+plt.ylabel('sample size (n)')
+plt.title('powerscape t-test') # color represents significant effects
